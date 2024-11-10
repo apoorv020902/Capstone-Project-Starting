@@ -27,7 +27,10 @@ export const userSignup = async (
     try {
         //signing upo the users
         const { name, email, password} = req.body;
-        const user = new User({name, email, password});
+        const hashedPassword = await hash(password, 10);
+        const user = new User({name, email, hashedPassword});
+        await user.save();
+        return res.status(200).json({message: "ok", id: user._id.toString() });
 
     } catch (error) {
         console.log(error)
