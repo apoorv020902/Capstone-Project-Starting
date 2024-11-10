@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { body, ValidationChain, validationResult } from "express-validator";
+import { deflate } from "zlib";
 
 export const validate = (validations: ValidationChain[]) => {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -17,7 +18,7 @@ export const validate = (validations: ValidationChain[]) => {
   };
 };
 
-const signupValidator = [
+export const signupValidator = [
     body("name").notEmpty().withMessage("Name is required"),
     body("email").trim().isEmail().withMessage("Email is required"),
     body("password")
