@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import User from "../models/User.js";
-import { hash } from 'bcrypt'
+import { hash,compare } from 'bcrypt'
 
 export const getAllUsers = async (
     req: Request,
@@ -28,8 +28,8 @@ export const userSignup = async (
         //signing upo the users
         const { name, email, password} = req.body;
         const existingUser = await User.findOne({email});
-        if (existingUser) 
-            return res.status(401).send("email already in use");
+        if (existingUser) {
+            return res.status(401).send("email already in use")};
         const hashedPassword = await hash(password, 10);
         const user = new User({name, email, hashedPassword});
         await user.save();
@@ -51,6 +51,15 @@ export const userLogin = async (
         //logging in the user
         const { email, password} = req.body;
         const user = await User.findOne({ email });
+        if (!user){
+            return res.status(401).send("User not found");
+        }
+        const isPasswordCorrect = await compare(password, user.password);
+        if (!isPasswordCorrect) {
+            return res.status(401).send("Incorrect Password");
+        }
+        return res.status(200).json({message: "ok", id: user._id.toString() });
+
         /*const hashedPassword = await hash(password, 10);
         const user = new User({name, email, hashedPassword});
         await user.save();
