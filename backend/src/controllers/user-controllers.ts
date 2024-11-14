@@ -60,7 +60,17 @@ export const userLogin = async (
             return res.status(401).send("Incorrect Password");
         }
         const token = createToken(user._id.toString(), user.email, "7d");
-    
+        const expires = new Date();
+        expires.setDate(expires.getDate() + 7);
+        
+        res.cookie("auth_token", token, {
+            path: "/",
+            domain: "localhost",   //change during deployement
+            expires,
+            httpOnly: true,
+            signed: true,
+        });
+
         return res.status(200).json({message: "ok", id: user._id.toString() });
 
         /*const hashedPassword = await hash(password, 10);
