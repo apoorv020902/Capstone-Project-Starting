@@ -1,66 +1,57 @@
-import { Box, useMediaQuery, useTheme } from "@mui/material";
-import React from "react";
-import TypingAnim from "../components/typer/TypingAnim";
-import Footer from "../components/footer/Footer";
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Bot, MessageSquare } from 'lucide-react';
+import TypingAnim from '../components/typer/TypingAnim';
+import Footer from '../components/footer/Footer';
+import { useAuth } from '../context/AuthContext';
 
 const Home = () => {
-  const theme = useTheme();
-  const isBelowMd = useMediaQuery(theme.breakpoints.down("md"));
+  const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
+
   return (
-    <Box width={"100%"} height={"100%"}>
-      <Box
-        sx={{
-          display: "flex",
-          width: "100%",
-          flexDirection: "column",
-          alignItems: "center",
-          mx: "auto",
-          mt: 3,
-        }}
-      >
-        <Box>
-          <TypingAnim />
-        </Box>
-        <Box
-          sx={{
-            width: "100%",
-            display: "flex",
-            flexDirection: { md: "row", xs: "column", sm: "column" },
-            gap: 5,
-            my: 10,
-          }}
-        >
-          <img
-            src="robot.png"
-            alt="robot"
-            style={{ width: "200px", margin: "auto" }}
-          />
-          <img
-            className="image-inverted rotate"
-            src="openai.png"
-            alt="openai"
-            style={{ width: "200px", margin: "auto" }}
-          />
-        </Box>
-        <Box sx={{ display: "flex", mx: "auto" }}>
-          <img
-            src="chat.png"
-            alt="chatbot"
-            style={{
-              display: "flex",
-              margin: "auto",
-              width: isBelowMd ? "80%" : "60%",
-              borderRadius: 20,
-              boxShadow: "-5px -5px 105px #64f3d5",
-              marginTop: 20,
-              marginBottom: 20,
-              padding: 10,
-            }}
-          />
-        </Box>
-      </Box>
+    <div className="min-h-screen flex flex-col">
+      {/* Hero Section */}
+      <main className="flex-grow">
+        <div className="max-w-4xl mx-auto px-4 py-12">
+          <div className="text-center mb-12">
+            <Bot className="w-16 h-16 text-blue-500 mx-auto mb-4" />
+            <TypingAnim />
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8 mt-16">
+            <div className="bg-white p-6 rounded-lg shadow-lg">
+              <MessageSquare className="w-12 h-12 text-blue-500 mb-4" />
+              <h2 className="text-2xl font-bold mb-4">Natural Conversations</h2>
+              <p className="text-gray-600">
+                Engage in natural, flowing conversations with our AI assistant.
+                Get intelligent responses and helpful information instantly.
+              </p>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-lg">
+              <Bot className="w-12 h-12 text-blue-500 mb-4" />
+              <h2 className="text-2xl font-bold mb-4">Advanced AI</h2>
+              <p className="text-gray-600">
+                Powered by cutting-edge AI technology to provide accurate,
+                relevant, and helpful responses to your queries.
+              </p>
+            </div>
+          </div>
+
+          <div className="text-center mt-12">
+            <button
+              onClick={() => navigate(isLoggedIn ? '/chat' : '/login')}
+              className="bg-blue-500 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-600 transition-colors"
+            >
+              {isLoggedIn ? 'Start Chatting' : 'Get Started'}
+            </button>
+          </div>
+        </div>
+      </main>
+
       <Footer />
-    </Box>
+    </div>
   );
 };
 

@@ -1,26 +1,27 @@
-import { TypeAnimation } from "react-type-animation";
+import React from 'react';
+import { useTypewriter, Cursor } from 'react-simple-typewriter';
 
 const TypingAnim = () => {
+  const [text] = useTypewriter({
+    words: ['Professional', 'Reliable', 'Intelligent', 'Helpful'],
+    loop: true,
+    typeSpeed: 100,
+    deleteSpeed: 50
+  });
+
   return (
-    <TypeAnimation
-      sequence={[
-        // Same substring at the start will only be typed once, initially
-        "Chat With Your OWN AI",
-        1000,
-        "Built With OpenAI 🤖",
-        2000,
-        "Your Own Customized ChatGPT 💻",
-        1500,
-      ]}
-      speed={50}
-      style={{
-        fontSize: "60px",
-        color: "white",
-        display: "inline-block",
-        textShadow: "1px 1px 20px #000",
-      }}
-      repeat={Infinity}
-    />
+    <div className="text-center">
+      <h1 className="text-4xl font-bold mb-4">
+        AI Assistant that is{' '}
+        <span className="text-blue-500">
+          {text}
+          <Cursor cursorStyle="|" />
+        </span>
+      </h1>
+      <p className="text-xl text-gray-600">
+        Your intelligent companion for conversations and assistance
+      </p>
+    </div>
   );
 };
 

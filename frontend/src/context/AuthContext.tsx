@@ -1,74 +1,92 @@
-import {
-  ReactNode,
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
-import {
-  checkAuthStatus,
-  loginUser,
-  logoutUser,
-  signupUser,
-} from "../helpers/api-communicator";
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { loginUser, logoutUser, signupUser, checkAuthStatus } from '../utils/api';
+import { toast } from 'react-hot-toast';
 
-type User = {
+interface User {
   name: string;
   email: string;
-};
-type UserAuth = {
-  isLoggedIn: boolean;
+}
+
+interface AuthContextType {
   user: User | null;
+  isLoggedIn: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-};
-const AuthContext = createContext<UserAuth | null>(null);
+}
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // fetch if the user's cookies are valid then skip login
-    async function checkStatus() {
-      const data = await checkAuthStatus();
-      if (data) {
-        setUser({ email: data.email, name: data.name });
-        setIsLoggedIn(true);
+    const verifyUser = async () => {
+      try {
+        const data = await checkAuthStatus();
+        setUser({ name: data.name, email: data.email });
+      } catch (error) {
+        setUser(null);
+      } finally {
+        setIsLoading(false);
       }
-    }
-    checkStatus();
+    };
+    verifyUser();
   }, []);
+
   const login = async (email: string, password: string) => {
-    const data = await loginUser(email, password);
-    if (data) {
-      setUser({ email: data.email, name: data.name });
-      setIsLoggedIn(true);
+    try {
+      const data = await loginUser(email, password);
+      setUser({ name: data.name, email: data.email });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Login failed';
+      toast.error(message);
+      throw error;
     }
-  };
-  const signup = async (name: string, email: string, password: string) => {
-    const data = await signupUser(name, email, password);
-    if (data) {
-      setUser({ email: data.email, name: data.name });
-      setIsLoggedIn(true);
-    }
-  };
-  const logout = async () => {
-    await logoutUser();
-    setIsLoggedIn(false);
-    setUser(null);
-    window.location.reload();
   };
 
-  const value = {
-    user,
-    isLoggedIn,
-    login,
-    logout,
-    signup,
+  const signup = async (name: string, email: string, password: string) => {
+    try {
+      const data = await signupUser(name, email, password);
+      setUser({ name: data.name, email: data.email });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Signup failed';
+      toast.error(message);
+      throw error;
+    }
   };
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+
+  const logout = async () => {
+    try {
+      await logoutUser();
+      setUser(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Logout failed';
+      toast.error(message);
+      throw error;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+      </div>
+    );
+  }
+
+  return (
+    <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, signup, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

@@ -1,201 +1,138 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Box, Avatar, Typography, Button, IconButton } from "@mui/material";
-import red from "@mui/material/colors/red";
-import { useAuth } from "../context/AuthContext";
-import ChatItem from "../components/chat/ChatItem";
-import { IoMdSend } from "react-icons/io";
-import { useNavigate } from "react-router-dom";
-import {
-  deleteUserChats,
-  getUserChats,
-  sendChatRequest,
-} from "../helpers/api-communicator";
-import toast from "react-hot-toast";
-type Message = {
-  role: "user" | "assistant";
-  content: string;
-};
-const Chat = () => {
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Bot, User, Trash2 } from 'lucide-react';
+import { ChatMessage } from '../components/ChatMessage';
+import { ChatInput } from '../components/ChatInput';
+import { Message, ChatState } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { useTextToSpeech } from '../hooks/useTextToSpeech';
+import { deleteUserChats, getUserChats, sendChatMessage } from '../utils/api';
+import { toast } from 'react-hot-toast';
+import LoadingSpinner from '../components/shared/LoadingSpinner';
+
+function Chat() {
   const navigate = useNavigate();
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const auth = useAuth();
-  const [chatMessages, setChatMessages] = useState<Message[]>([]);
-  const handleSubmit = async () => {
-    const content = inputRef.current?.value as string;
-    if (inputRef && inputRef.current) {
-      inputRef.current.value = "";
-    }
-    const newMessage: Message = { role: "user", content };
-    setChatMessages((prev) => [...prev, newMessage]);
-    const chatData = await sendChatRequest(content);
-    setChatMessages([...chatData.chats]);
-    //
-  };
-  const handleDeleteChats = async () => {
+  const { user, isLoggedIn } = useAuth();
+  const [chatState, setChatState] = useState<ChatState>({
+    messages: [],
+    isLoading: false,
+    error: null,
+  });
+
+  const { speak, stop } = useTextToSpeech();
+
+  const loadChats = useCallback(async () => {
     try {
-      toast.loading("Deleting Chats", { id: "deletechats" });
-      await deleteUserChats();
-      setChatMessages([]);
-      toast.success("Deleted Chats Successfully", { id: "deletechats" });
+      const data = await getUserChats();
+      setChatState(prev => ({
+        ...prev,
+        messages: data.chats,
+      }));
     } catch (error) {
-      console.log(error);
-      toast.error("Deleting chats failed", { id: "deletechats" });
+      console.error('Failed to load chats:', error);
+      toast.error('Failed to load chat history');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
+    loadChats();
+  }, [isLoggedIn, navigate, loadChats]);
+
+  const handleSendMessage = async (content: string) => {
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content,
+      timestamp: new Date(),
+    };
+
+    setChatState((prev) => ({
+      ...prev,
+      messages: [...prev.messages, userMessage],
+      isLoading: true,
+    }));
+
+    try {
+      const response = await sendChatMessage(content);
+      setChatState((prev) => ({
+        ...prev,
+        messages: response.chats,
+        isLoading: false,
+      }));
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      toast.error('Failed to get AI response');
+      setChatState((prev) => ({
+        ...prev,
+        isLoading: false,
+        error: 'Failed to get response',
+      }));
     }
   };
-  useLayoutEffect(() => {
-    if (auth?.isLoggedIn && auth.user) {
-      toast.loading("Loading Chats", { id: "loadchats" });
-      getUserChats()
-        .then((data) => {
-          setChatMessages([...data.chats]);
-          toast.success("Successfully loaded chats", { id: "loadchats" });
-        })
-        .catch((err) => {
-          console.log(err);
-          toast.error("Loading Failed", { id: "loadchats" });
-        });
+
+  const handleClearChat = async () => {
+    try {
+      await deleteUserChats();
+      setChatState((prev) => ({
+        ...prev,
+        messages: [],
+      }));
+      toast.success('Chat history cleared');
+    } catch (error) {
+      console.error('Failed to clear chats:', error);
+      toast.error('Failed to clear chat history');
     }
-  }, [auth]);
-  useEffect(() => {
-    if (!auth?.user) {
-      return navigate("/login");
-    }
-  }, [auth]);
+  };
+
   return (
-    <Box
-      sx={{
-        display: "flex",
-        flex: 1,
-        width: "100%",
-        height: "100%",
-        mt: 3,
-        gap: 3,
-      }}
-    >
-      <Box
-        sx={{
-          display: { md: "flex", xs: "none", sm: "none" },
-          flex: 0.2,
-          flexDirection: "column",
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            width: "100%",
-            height: "60vh",
-            bgcolor: "rgb(17,29,39)",
-            borderRadius: 5,
-            flexDirection: "column",
-            mx: 3,
-          }}
-        >
-          <Avatar
-            sx={{
-              mx: "auto",
-              my: 2,
-              bgcolor: "white",
-              color: "black",
-              fontWeight: 700,
-            }}
-          >
-            {auth?.user?.name[0]}
-            {auth?.user?.name.split(" ")[1][0]}
-          </Avatar>
-          <Typography sx={{ mx: "auto", fontFamily: "work sans" }}>
-            You are talking to a ChatBOT
-          </Typography>
-          <Typography sx={{ mx: "auto", fontFamily: "work sans", my: 4, p: 3 }}>
-            You can ask some questions related to Knowledge, Business, Advices,
-            Education, etc. But avoid sharing personal information
-          </Typography>
-          <Button
-            onClick={handleDeleteChats}
-            sx={{
-              width: "200px",
-              my: "auto",
-              color: "white",
-              fontWeight: "700",
-              borderRadius: 3,
-              mx: "auto",
-              bgcolor: red[300],
-              ":hover": {
-                bgcolor: red.A400,
-              },
-            }}
-          >
-            Clear Conversation
-          </Button>
-        </Box>
-      </Box>
-      <Box
-        sx={{
-          display: "flex",
-          flex: { md: 0.8, xs: 1, sm: 1 },
-          flexDirection: "column",
-          px: 3,
-        }}
-      >
-        <Typography
-          sx={{
-            fontSize: "40px",
-            color: "white",
-            mb: 2,
-            mx: "auto",
-            fontWeight: "600",
-          }}
-        >
-          Model - GPT 3.5 Turbo
-        </Typography>
-        <Box
-          sx={{
-            width: "100%",
-            height: "60vh",
-            borderRadius: 3,
-            mx: "auto",
-            display: "flex",
-            flexDirection: "column",
-            overflow: "scroll",
-            overflowX: "hidden",
-            overflowY: "auto",
-            scrollBehavior: "smooth",
-          }}
-        >
-          {chatMessages.map((chat, index) => (
-            //@ts-ignore
-            <ChatItem content={chat.content} role={chat.role} key={index} />
-          ))}
-        </Box>
-        <div
-          style={{
-            width: "100%",
-            borderRadius: 8,
-            backgroundColor: "rgb(17,27,39)",
-            display: "flex",
-            margin: "auto",
-          }}
-        >
-          {" "}
-          <input
-            ref={inputRef}
-            type="text"
-            style={{
-              width: "100%",
-              backgroundColor: "transparent",
-              padding: "30px",
-              border: "none",
-              outline: "none",
-              color: "white",
-              fontSize: "20px",
-            }}
-          />
-          <IconButton onClick={handleSubmit} sx={{ color: "white", mx: 1 }}>
-            <IoMdSend />
-          </IconButton>
+    <div className="max-w-4xl mx-auto bg-white shadow-lg min-h-screen flex flex-col">
+      {/* Header */}
+      <div className="border-b p-4 flex items-center justify-between bg-white">
+        <div className="flex items-center gap-2">
+          <Bot className="w-6 h-6 text-blue-500" />
+          <h1 className="text-xl font-semibold">AI Chatbot</h1>
         </div>
-      </Box>
-    </Box>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
+              {user?.name?.[0] || 'U'}
+            </div>
+            <span className="text-sm font-medium">{user?.name || 'User'}</span>
+          </div>
+          <button
+            onClick={handleClearChat}
+            className="p-2 text-gray-500 hover:text-red-500"
+          >
+            <Trash2 size={20} />
+          </button>
+        </div>
+      </div>
+
+      {/* Chat Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {chatState.messages.map((message) => (
+          <ChatMessage
+            key={message.id}
+            message={message}
+            onSpeakMessage={() => speak(message.content)}
+          />
+        ))}
+        {chatState.isLoading && (
+          <div className="flex items-center gap-2 text-gray-500">
+            <LoadingSpinner size="sm" />
+            <span>Thinking...</span>
+          </div>
+        )}
+      </div>
+
+      {/* Input */}
+      <ChatInput onSend={handleSendMessage} disabled={chatState.isLoading} />
+    </div>
   );
-};
+}
 
 export default Chat;
