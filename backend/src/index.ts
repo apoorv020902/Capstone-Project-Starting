@@ -1,10 +1,12 @@
 import app from "./app.js";
 import { connectToDatabase } from "./db/connection.js";
-const PORT = process.env.PORT || 5002
 
-//connection and listeners
+//connections and listeneres
+const PORT = process.env.PORT || 5000;
 connectToDatabase()
-    .then (() => {
-        app.listen(PORT, ()=> console.log("Server Open and connected to the Database"));
-    })
-    .catch((err)=> console.log(err));
+  .then(() => {
+    app.listen(PORT, () =>
+      console.log("Server Open & Connected To Database 🤟")
+    );
+  })
+  .catch((err) => console.log(err));
